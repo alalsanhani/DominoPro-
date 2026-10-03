@@ -1,0 +1,44 @@
+name: Build iOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract project
+        run: |
+          unzip -q DominoPro_iOS_Update29_Xcode.zip -d source
+
+      - name: Build iPhone app
+        run: |
+          xcodebuild \
+            -project source/DominoPro-iOS/DominoPro.xcodeproj \
+            -scheme DominoPro \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p package/Payload
+          cp -R build/Build/Products/Release-iphoneos/DominoPro.app package/Payload/
+          cd package
+          zip -qr ../DominoPro-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DominoPro-unsigned
+          path: DominoPro-unsigned.ipa
+          if-no-files-found: error
